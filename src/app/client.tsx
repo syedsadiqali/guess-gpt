@@ -145,6 +145,7 @@ export default function Chat() {
                   config={{
                     allowedExtensions: ["jpg", "jpeg", "png", "webp"],
                     disabled: !!imageUrl,
+					          fileSizeLimit: 1024 * 1024 * 2
                   }}
                 />
               </div>
