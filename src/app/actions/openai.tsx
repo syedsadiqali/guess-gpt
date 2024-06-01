@@ -5,8 +5,8 @@ import { CoreMessage, streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { headers } from "next/headers";
 import { Redis } from "@upstash/redis";
-import { Ratelimit } from "@upstash/ratelimit";
 import { SYSTEM_PROMPT } from "@/lib/constants";
+import { ratelimit } from "@/lib/rate-limit";
 
 export async function getIp() {
   const FALLBACK_IP_ADDRESS = "0.0.0.0";
@@ -31,7 +31,13 @@ export async function getHost() {
   }
 }
 
-export async function continueConversation(messages: CoreMessage[]) {
+export async function continueConversation({
+  imageUrl,
+  input,
+}: {
+  imageUrl: string;
+  input: string;
+}) {
   if (
     process.env.UPSTASH_REDIS_REST_URL &&
     process.env.UPSTASH_REDIS_REST_TOKEN
@@ -40,13 +46,7 @@ export async function continueConversation(messages: CoreMessage[]) {
     const host = await getHost();
 
     if (host !== "localhost") {
-      const ratelimit = new Ratelimit({
-        redis: Redis.fromEnv(),
-        // rate limit to 5 requests per hour
-        limiter: Ratelimit.slidingWindow(5, "1h"),
-      });
-
-      const { success, limit, reset, remaining } = await ratelimit.limit(
+      const { success, limit, reset, remaining } = await ratelimit(5, "1 h").limit(
         `ratelimit_${ip}`
       );
 
@@ -57,14 +57,26 @@ export async function continueConversation(messages: CoreMessage[]) {
         };
       }
     }
+    const newMessages: CoreMessage[] = [
+      {
+        content: [
+          {
+            type: "text",
+            text: input,
+          },
+          { type: "image", image: new URL(imageUrl as string) },
+        ],
+        role: "user",
+      },
+    ];
+
+    const result = await streamText({
+      model: openai("gpt-4o"),
+      system: SYSTEM_PROMPT,
+      messages: newMessages,
+    });
+
+    const stream = createStreamableValue(result.textStream);
+    return stream.value;
   }
-
-  const result = await streamText({
-    model: openai("gpt-4o"),
-    system: SYSTEM_PROMPT,
-    messages,
-  });
-
-  const stream = createStreamableValue(result.textStream);
-  return stream.value;
 }
