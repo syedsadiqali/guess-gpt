@@ -6,7 +6,7 @@ export function SiteFooter() {
       <div className="container flex h-12 items-center flex justify-center">
         <p className="leading-7 [&:not(:first-child)]:mt-6">
           made with ❤️ by{" "}
-          <Link className="font-bold" href="https://twitter.com/@alisyedsadiq" target="_blank">
+          <Link className="font-bold" href="https://twitter.com/@alisyedsadiq1" target="_blank">
             syedsadiqali
           </Link>{" "}
           {/* with <span className="font-bold">NextJS</span>,{" "}
